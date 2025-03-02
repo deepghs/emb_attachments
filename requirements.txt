@@ -1,0 +1,13 @@
+hfutils>=0.8.0
+hbutils
+huggingface_hub
+dghs-imgutils>=0.12.0
+dghs-realutils>=0.1.0
+tqdm
+numpy<2
+pillow
+torch>=2.5.0
+accelerate>=1.4.0
+pandas
+safetensors
+onnxruntime-gpu
