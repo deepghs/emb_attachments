@@ -93,7 +93,7 @@ gen
 # Animated Portable Network Graphics
 *.apng
 
-# Multiple-image Network Graphics
+# Multiple-obj Network Graphics
 *.mng
 
 # Tagged Image File Format

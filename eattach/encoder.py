@@ -1,12 +1,11 @@
 import dataclasses
 from functools import partial
-from typing import Callable, Dict
+from typing import Callable, Dict, Any
 
 import numpy as np
-from imgutils.data import ImageTyping
 from imgutils.tagging import get_wd14_tags
 
-FnEncodeTyping = Callable[[ImageTyping], np.ndarray]
+FnEncodeTyping = Callable[[Any], np.ndarray]
 
 
 @dataclasses.dataclass
@@ -15,8 +14,8 @@ class Encoder:
     model_name: str
     fn_encode: FnEncodeTyping
 
-    def __call__(self, image: ImageTyping) -> np.ndarray:
-        return self.fn_encode(image)
+    def __call__(self, obj) -> np.ndarray:
+        return self.fn_encode(obj)
 
     def to_json(self):
         return {
