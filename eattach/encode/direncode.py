@@ -1,8 +1,7 @@
 import logging
 import mimetypes
 import os.path
-from ctypes import Union
-from typing import Callable, Any
+from typing import Callable, Any, Union
 
 import numpy as np
 from PIL import Image
