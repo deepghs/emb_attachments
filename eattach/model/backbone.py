@@ -1,7 +1,9 @@
+import json
 from dataclasses import dataclass
-from pprint import pprint
 from typing import Optional, List, Union, Any, Dict, Type
 
+from safetensors import safe_open
+from safetensors.torch import save_model, load_model
 from torch import nn
 
 from .activation import get_act_func
@@ -18,6 +20,45 @@ class Backbone:
             **self.init_params,
             'type': self.type,
         }
+
+    def save(self, ckpt_file: str):
+        save_model(
+            model=self.module,
+            filename=ckpt_file,
+            metadata={
+                'model_type': self.type,
+                'init_params': json.dumps(self.init_params),
+            }
+        )
+
+    @classmethod
+    def load(cls, ckpt_file, device: Union[str, int] = 'cpu') -> 'Backbone':
+        with safe_open(ckpt_file, 'pt') as f:
+            metadata = f.metadata()
+
+        type_ = metadata['model_type']
+        init_params = json.loads(metadata['init_params'])
+        module = _BACKBONES[type_](**init_params)
+        load_model(
+            model=module,
+            filename=ckpt_file,
+            device=device,
+        )
+
+        return Backbone(
+            type=type_,
+            init_params=init_params,
+            module=module,
+        )
+
+    @classmethod
+    def new(cls, type_: str, **init_params) -> 'Backbone':
+        module = _BACKBONES[type_](**init_params)
+        return Backbone(
+            type=type_,
+            init_params=init_params,
+            module=module,
+        )
 
 
 _BACKBONES: Dict[str, Type[nn.Module]] = {}
@@ -57,15 +98,10 @@ class MLP(nn.Module):
         return self._layers(x)
 
 
-def create_backbone(type: str, **init_params) -> Backbone:
-    return Backbone(
-        type=type,
-        init_params=init_params,
-        module=_BACKBONES[type](**init_params),
-    )
-
-
 if __name__ == '__main__':
-    model = create_backbone('mlp', layers=[500, 300])
+    model = Backbone.new('mlp', layers=[500, 300])
     print(model)
-    pprint(model.to_json())
+    model.save('test_model.safetensors')
+
+    model = Backbone.load('test_model.safetensors')
+    print(model)
