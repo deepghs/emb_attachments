@@ -5,14 +5,15 @@ import numpy as np
 from torch.utils.data import Dataset
 
 
-class LocalObjDataset(Dataset):
-    def __init__(self, obj_dir, labels, no_cache: bool = False):
+class InstanceDirDataset(Dataset):
+    def __init__(self, obj_dir, labels, embedding_key: str, no_cache: bool = False):
         self.labels = labels
         self._label_map = {l: i for i, l in enumerate(labels)}
+        self._embedding_key = embedding_key
 
         self.objs = []
         for lid, label in enumerate(labels):
-            for f in glob.glob(os.path.join(obj_dir, label, '*.npy')):
+            for f in glob.glob(os.path.join(obj_dir, label, '*.npz')):
                 self.objs.append((f, lid))
 
         self._cached_objs = {}
@@ -20,7 +21,8 @@ class LocalObjDataset(Dataset):
 
     def _raw_load_obj(self, index):
         obj_file, lid = self.objs[index]
-        obj = np.load(obj_file)
+        with np.load(obj_file) as nf:
+            obj = nf[self._embedding_key]
         return obj, lid
 
     def _getitem(self, index):
