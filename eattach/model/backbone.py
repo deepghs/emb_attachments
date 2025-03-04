@@ -15,12 +15,6 @@ class Backbone:
     init_params: Dict[str, Any]
     module: nn.Module
 
-    def to_json(self):
-        return {
-            **self.init_params,
-            'type': self.type,
-        }
-
     def save(self, ckpt_file: str):
         save_model(
             model=self.module,
