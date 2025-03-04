@@ -52,7 +52,7 @@ def npz_file_append(npz_file: str, extra_data: Dict[str, Any]):
             data.update(nf)
 
     data.update(**extra_data)
-    np.savez(npz_file, extra_data)
+    np.savez(npz_file, **extra_data)
 
 
 def npz_file_key_exists(npz_file: str, key: str) -> bool:
@@ -65,6 +65,14 @@ def npz_file_key_exists(npz_file: str, key: str) -> bool:
 
 def get_embedding_key(encode_system: str, model_name: str) -> str:
     return f'{encode_system}:{model_name}'
+
+
+def clean_encode_for_dir(directory: str):
+    for root, _, files in os.walk(directory):
+        for file in files:
+            path = os.path.abspath(os.path.join(root, file))
+            if is_npz_file(path):
+                os.remove(path)
 
 
 def encode_for_dir(directory: str, encode_system: str, model_name: str,
