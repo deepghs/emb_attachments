@@ -78,7 +78,7 @@ def encode_for_dir(directory: str, encode_system: str, model_name: str,
     for root, _, files in os.walk(directory):
         for file in files:
             path = os.path.abspath(os.path.join(root, file))
-            if is_npy_file(path):
+            if is_npz_file(path):
                 continue
 
             dst_npz_path = get_npz_file(path)
@@ -95,7 +95,7 @@ def encode_for_dir(directory: str, encode_system: str, model_name: str,
         try:
             data = modality(path)
         except UnsupportedFileFormat:
-            logging.warning(f'Supported file encoding - {path}.')
+            logging.warning(f'Unsupported file encoding - {path}.')
             continue
 
         binary_data = encoder(data)
