@@ -2,6 +2,7 @@ import json
 from dataclasses import dataclass
 from typing import Optional, List, Union, Any, Dict, Type
 
+import torch
 from safetensors import safe_open
 from safetensors.torch import save_model, load_model
 from torch import nn
@@ -97,8 +98,14 @@ class MLP(nn.Module):
 
 
 if __name__ == '__main__':
-    model = Backbone.new('mlp', layers=[500, 300])
+    model = Backbone.new('mlp', in_dims=1024, out_dims=10, layers=[500, 300])
     print(model)
+
+    dummy_input = torch.randn(1, 1024)
+    with torch.no_grad():
+        dummy_output = model.module(dummy_input)
+    print(dummy_output.shape)
+
     model.save('test_model.safetensors')
 
     model = Backbone.load('test_model.safetensors')
