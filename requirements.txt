@@ -11,3 +11,4 @@ accelerate>=1.4.0
 pandas
 safetensors
 onnxruntime-gpu
+di-toolkit>=0.2.0
