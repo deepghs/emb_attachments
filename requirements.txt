@@ -12,3 +12,5 @@ pandas
 safetensors
 onnxruntime-gpu
 di-toolkit>=0.2.0
+timm>=1
+torchvision
