@@ -6,6 +6,7 @@ from hbutils.random import global_seed
 from torch import nn
 
 from .base import Problem
+from ..model.heads import SplitHead
 
 
 class CompositeLossFn(nn.Module):
@@ -39,6 +40,30 @@ class CompositeLossFn(nn.Module):
         return (self.weights * values).sum(dim=-1)
 
 
+class CompositeHead(nn.Module):
+    def __init__(self, items: List[Tuple[str, int, nn.Module]], keep_logits: bool = False):
+        nn.Module.__init__(self)
+
+        _last_offset = 0
+        self._slices = {}
+        self._keys = []
+        _submodules = {}
+        for key, width, submodule in items:
+            self._keys.append(key)
+            self._slices[key] = slice(_last_offset, _last_offset + width)
+            _submodules[key] = submodule
+            _last_offset += width
+
+        self.submodules = nn.ModuleDict(_submodules)
+        self.split_head = SplitHead(keep_logits=keep_logits)
+
+    def forward(self, x):
+        pred = {}
+        for key in self._keys:
+            pred[key] = self.submodules[key](x[..., self._slices[key]])
+        return self.split_head(pred, x)
+
+
 @dataclass
 class CompositeProblem(Problem):
     problems: Dict[str, Problem]
@@ -59,6 +84,13 @@ class CompositeProblem(Problem):
                 loss_weights.get(key, 1.0)
             ))
         return CompositeLossFn(items, **kwargs)
+
+    def get_head(self, keep_logits: bool = False):
+        items = []
+        for key, problem in self.problems.items():
+            items.append((key, problem.width, problem.get_head(keep_logits=False)))
+
+        return CompositeHead(items, keep_logits=keep_logits)
 
 
 if __name__ == '__main__':
@@ -83,8 +115,9 @@ if __name__ == '__main__':
     )
     print(loss_fn)
 
+    dummy_input = torch.randn(10, 7)
     v = loss_fn(
-        torch.randn(10, 7),
+        dummy_input,
         {
             'p1': torch.tensor([0, 1, 2, 0, 1, 2, 0, 1, 2, 0]),
             'p2': torch.tensor([0, 1, 2, 3, 0, 1, 2, 3, 0, 1]),
@@ -92,3 +125,6 @@ if __name__ == '__main__':
     )
     print(v)
     print(v.mean())
+
+    head = p.get_head()
+    print(head(dummy_input))

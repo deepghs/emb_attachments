@@ -3,6 +3,7 @@ from typing import List
 
 from .base import Problem
 from ..loss import get_loss_fn
+from ..model.heads import ClassificationHead
 
 
 @dataclass
@@ -19,3 +20,6 @@ class ClassificationProblem(Problem):
             num_classes=len(self.labels),
             **kwargs
         )
+
+    def get_head(self, keep_logits: bool = False):
+        return ClassificationHead(keep_logits=keep_logits)
