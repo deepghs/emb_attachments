@@ -15,11 +15,15 @@ class Backbone:
     init_params: Dict[str, Any]
     module: nn.Module
 
-    def save(self, ckpt_file: str):
+    def save(self, ckpt_file: str, extra_metadata: Dict[str, Any] = None):
         save_model(
             model=self.module,
             filename=ckpt_file,
             metadata={
+                **{
+                    key: json.dumps(value)
+                    for key, value in (extra_metadata or {}).items()
+                },
                 'model_type': self.type,
                 'init_params': json.dumps(self.init_params),
             }
