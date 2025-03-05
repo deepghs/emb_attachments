@@ -35,8 +35,8 @@ class CompositeLossFn(nn.Module):
         for key in self._keys:
             values.append(self.submodules[key](x[..., self._slices[key]], expected[key]))
 
-        values = torch.stack(values, dim=0)
-        return (self.weights * values).sum(dim=0)
+        values = torch.stack(values, dim=-1)
+        return (self.weights * values).sum(dim=-1)
 
 
 @dataclass
@@ -73,16 +73,22 @@ if __name__ == '__main__':
         }
     )
     print(p)
-    loss_fn = p.get_loss_fn(problems_cfg={
-        'p1': {'loss_fn_name': 'focal'},
-        'p2': {'loss_fn_name': 'focal'},
-    }, loss_weights={'p1': 0.5})
+    loss_fn = p.get_loss_fn(
+        problems_cfg={
+            'p1': {'loss_fn_name': 'focal'},
+            'p2': {'loss_fn_name': 'focal'},
+        },
+        loss_weights={'p1': 0.5},
+        reduction='none',
+    )
     print(loss_fn)
 
-    print(loss_fn(
+    v = loss_fn(
         torch.randn(10, 7),
         {
             'p1': torch.tensor([0, 1, 2, 0, 1, 2, 0, 1, 2, 0]),
             'p2': torch.tensor([0, 1, 2, 3, 0, 1, 2, 3, 0, 1]),
         },
-    ))
+    )
+    print(v)
+    print(v.mean())
