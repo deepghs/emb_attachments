@@ -1,8 +1,11 @@
 import json
+import os.path
+import zipfile
 from dataclasses import dataclass
-from typing import Optional, List, Union, Any, Dict, Type
+from typing import Optional, List, Union, Any, Dict, Type, Tuple
 
 import torch
+from hbutils.system import TemporaryDirectory
 from safetensors import safe_open
 from safetensors.torch import save_model, load_model
 from torch import nn
@@ -31,12 +34,14 @@ class Backbone:
         )
 
     @classmethod
-    def load(cls, ckpt_file, device: Union[str, int] = 'cpu') -> 'Backbone':
+    def load(cls, ckpt_file, device: Union[str, int] = 'cpu', with_metadata: bool = False) \
+            -> Union['Backbone', Tuple['Backbone', dict]]:
         with safe_open(ckpt_file, 'pt') as f:
             metadata = f.metadata()
 
-        type_ = metadata['model_type']
-        init_params = json.loads(metadata['init_params'])
+        type_ = metadata.pop('model_type')
+        init_params = json.loads(metadata.pop('init_params'))
+        metadata = {key: json.loads(value) for key, value in metadata.items()}
         module = _BACKBONES[type_](**init_params)
         load_model(
             model=module,
@@ -44,11 +49,25 @@ class Backbone:
             device=device,
         )
 
-        return Backbone(
+        backbone = Backbone(
             type=type_,
             init_params=init_params,
             module=module,
         )
+        if with_metadata:
+            return backbone, metadata
+        else:
+            return backbone
+
+    @classmethod
+    def load_from_zip(cls, zip_file: str, filename: str = 'model.safetensors',
+                      device: Union[str, int] = 'cpu', with_metadata: bool = False) \
+            -> Union['Backbone', Tuple['Backbone', dict]]:
+        with TemporaryDirectory() as td:
+            with zipfile.ZipFile(zip_file, 'r') as zf:
+                zf.extract(filename, td)
+                ckpt_file = os.path.join(td, filename)
+                return cls.load(ckpt_file, device=device, with_metadata=with_metadata)
 
     @classmethod
     def new(cls, type_: str, **init_params) -> 'Backbone':
