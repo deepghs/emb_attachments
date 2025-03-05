@@ -1,4 +1,4 @@
-from typing import Mapping, Tuple, Type, Dict, List, Literal
+from typing import Mapping, Tuple, Type, Dict, List
 
 import torch.nn
 
@@ -14,16 +14,15 @@ def register_loss(problem: str, name: str, module: Type[torch.nn.Module], *args,
         raise ValueError(f'Loss {name!r} for {problem} problem already exist!')
 
 
-def get_loss_fn(problem: str, name: str, num_classes: int, weight, reduction: Literal['mean', 'sum'] = 'mean',
-                **loss_args):
+def get_loss_fn(problem: str, name: str, **loss_args):
     if problem in _KNOWN_LOSSES:
         if name in _KNOWN_LOSSES[problem]:
             module, args, kwargs = _KNOWN_LOSSES[problem][name]
 
             # noinspection PyArgumentList
-            return module(num_classes, *args, reduction=reduction, weight=weight, **kwargs, **loss_args)
+            return module(*args, **{**kwargs, **loss_args})
         else:
-            raise ValueError(f'Loss function should be one of the {list_losses()!r}, but {name!r} found.')
+            raise ValueError(f'Loss function should be one of the {list_losses(problem)!r}, but {name!r} found.')
     else:
         raise ValueError(f'Unknown problem type for loss function - {problem!r}.')
 

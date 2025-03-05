@@ -10,7 +10,8 @@ class FocalLoss(nn.Module):
     Based on https://discuss.pytorch.org/t/is-this-a-correct-implementation-for-focal-loss-in-pytorch/43327/8
     """
 
-    def __init__(self, num_classes, gamma=2., reduction='mean', weight=None):
+    def __init__(self, num_classes, gamma=2., reduction='mean', weight=None, **kwargs):
+        _ = kwargs
         nn.Module.__init__(self)
         self.num_classes = num_classes
         weight = torch.as_tensor(weight).float() if weight is not None else weight

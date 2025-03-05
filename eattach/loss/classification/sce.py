@@ -7,8 +7,9 @@ from .base import register_loss
 
 
 class SCELoss(torch.nn.Module):
-    def __init__(self, num_classes, alpha=0.1, beta=1.0,
-                 reduction: Literal['mean', 'sum'] = 'mean', weight=None):
+    def __init__(self, num_classes, alpha=0.1, beta=1.0, reduction: Literal['mean', 'sum'] = 'mean', weight=None,
+                 **kwargs):
+        _ = kwargs
         super(SCELoss, self).__init__()
         _ = reduction, weight
         self.alpha = alpha

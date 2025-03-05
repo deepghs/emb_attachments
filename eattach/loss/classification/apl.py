@@ -15,8 +15,8 @@ from .base import register_loss, WeightAttachment, LossReduction
 
 
 class NormalizedCrossEntropy(torch.nn.Module):
-    def __init__(self, num_classes, scale=1.0,
-                 reduction: Literal['mean', 'sum'] = 'mean', weight=None):
+    def __init__(self, num_classes, scale=1.0, reduction: Literal['mean', 'sum'] = 'mean', weight=None, **kwargs):
+        _ = kwargs
         torch.nn.Module.__init__(self)
         self.num_classes = num_classes
         self.scale = scale
@@ -33,8 +33,9 @@ class NormalizedCrossEntropy(torch.nn.Module):
 
 
 class NormalizedFocalLoss(torch.nn.Module):
-    def __init__(self, num_classes, scale=1.0, gamma=0.0,
-                 reduction: Literal['mean', 'sum'] = 'mean', weight=None):
+    def __init__(self, num_classes, scale=1.0, gamma=0.0, reduction: Literal['mean', 'sum'] = 'mean', weight=None,
+                 **kwargs):
+        _ = kwargs
         torch.nn.Module.__init__(self)
         self.gamma = gamma
         self.num_classes = num_classes
@@ -57,8 +58,8 @@ class NormalizedFocalLoss(torch.nn.Module):
 
 
 class MeanAbsoluteError(torch.nn.Module):
-    def __init__(self, num_classes, scale=1.0,
-                 reduction: Literal['mean', 'sum'] = 'mean', weight=None):
+    def __init__(self, num_classes, scale=1.0, reduction: Literal['mean', 'sum'] = 'mean', weight=None, **kwargs):
+        _ = kwargs
         torch.nn.Module.__init__(self)
         self.num_classes = num_classes
         self.scale = scale
@@ -80,8 +81,8 @@ class MeanAbsoluteError(torch.nn.Module):
 
 
 class ReverseCrossEntropy(torch.nn.Module):
-    def __init__(self, num_classes, scale=1.0,
-                 reduction: Literal['mean', 'sum'] = 'mean', weight=None):
+    def __init__(self, num_classes, scale=1.0, reduction: Literal['mean', 'sum'] = 'mean', weight=None, **kwargs):
+        _ = kwargs
         torch.nn.Module.__init__(self)
         self.num_classes = num_classes
         self.scale = scale
@@ -100,8 +101,9 @@ class ReverseCrossEntropy(torch.nn.Module):
 
 
 class NCEAndRCE(torch.nn.Module):
-    def __init__(self, num_classes, alpha=1.0, beta=1.0,
-                 reduction: Literal['mean', 'sum'] = 'mean', weight=None):
+    def __init__(self, num_classes, alpha=1.0, beta=1.0, reduction: Literal['mean', 'sum'] = 'mean', weight=None,
+                 **kwargs):
+        _ = kwargs
         torch.nn.Module.__init__(self)
         self.num_classes = num_classes
         self.nce = NormalizedCrossEntropy(
@@ -121,8 +123,9 @@ register_loss('nce+rce', NCEAndRCE)
 
 
 class NCEAndMAE(torch.nn.Module):
-    def __init__(self, num_classes, alpha=1.0, beta=1.0,
-                 reduction: Literal['mean', 'sum'] = 'mean', weight=None):
+    def __init__(self, num_classes, alpha=1.0, beta=1.0, reduction: Literal['mean', 'sum'] = 'mean', weight=None,
+                 **kwargs):
+        _ = kwargs
         torch.nn.Module.__init__(self)
         self.num_classes = num_classes
         self.nce = NormalizedCrossEntropy(
@@ -142,8 +145,9 @@ register_loss('nce+mae', NCEAndMAE)
 
 
 class NFLAndRCE(torch.nn.Module):
-    def __init__(self, num_classes, alpha=1.0, beta=1.0, gamma=0.5,
-                 reduction: Literal['mean', 'sum'] = 'mean', weight=None):
+    def __init__(self, num_classes, alpha=1.0, beta=1.0, gamma=0.5, reduction: Literal['mean', 'sum'] = 'mean',
+                 weight=None, **kwargs):
+        _ = kwargs
         torch.nn.Module.__init__(self)
         self.num_classes = num_classes
         self.nfl = NormalizedFocalLoss(
@@ -163,8 +167,9 @@ register_loss('nfl+rce', NFLAndRCE)
 
 
 class NFLAndMAE(torch.nn.Module):
-    def __init__(self, num_classes, alpha=1.0, beta=1.0, gamma=0.5,
-                 reduction: Literal['mean', 'sum'] = 'mean', weight=None):
+    def __init__(self, num_classes, alpha=1.0, beta=1.0, gamma=0.5, reduction: Literal['mean', 'sum'] = 'mean',
+                 weight=None, **kwargs):
+        _ = kwargs
         torch.nn.Module.__init__(self)
         self.num_classes = num_classes
         self.nfl = NormalizedFocalLoss(

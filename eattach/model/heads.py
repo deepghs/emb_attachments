@@ -24,7 +24,7 @@ class ClassificationHead(nn.Module):
         return self.split_head(pred, x)
 
 
-class MultiLabelClassificationHead(nn.Module):
+class TaggingHead(nn.Module):
     def __init__(self, keep_logits: bool = False):
         nn.Module.__init__(self)
         self.sigmoid = nn.Sigmoid()
@@ -47,7 +47,7 @@ class RegressionHead(nn.Module):
 
 _PROBLEMS = {
     'classification': ClassificationHead,
-    'multi_label': MultiLabelClassificationHead,
+    'tagging': TaggingHead,
     'regression': RegressionHead,
 }
 

@@ -8,8 +8,9 @@ from .base import register_loss, LossReduction
 
 
 class LabelSmoothingCrossEntropy(nn.Module):
-    def __init__(self, num_classes: int, smoothing: float = 0.1,
-                 reduction: Literal['mean', 'sum'] = 'mean', weight=None):
+    def __init__(self, num_classes: int, smoothing: float = 0.1, reduction: Literal['mean', 'sum'] = 'mean',
+                 weight=None, **kwargs):
+        _ = kwargs
         super(LabelSmoothingCrossEntropy, self).__init__()
         _ = num_classes
         self.smoothing = smoothing
