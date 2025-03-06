@@ -160,6 +160,8 @@ def train_classification(
             train_y_score.append(torch.softmax(outputs, dim=1))
             train_total += labels_.shape[0]
 
+            print(outputs.shape, labels_.shape)
+
             loss = loss_fn(outputs, labels_)
             accelerator.backward(loss)
             optimizer.step()
