@@ -64,6 +64,7 @@ def huggingface(repository: str, revision: str):
         row = {'Name': name}
 
         problem = load_problem(meta_info['problem'])
+        row['Encoder'] = meta_info['encoder_model']
         row['Problem'] = meta_info['problem']['type']
 
         flops, params = meta_info['flops'], meta_info['params']
