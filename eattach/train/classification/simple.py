@@ -151,12 +151,16 @@ def train_classification(
     if accelerator.is_main_process:
         session = TrainSession(
             workdir, key_metric=key_metric,
-            extra_metadata={f'train/{key}': value for key, value in train_cfg.items()}
+            extra_metadata={
+                **{f'train/{key}': value for key, value in train_cfg.items()},
+                **{f'problem/{key}': value for key, value in problem.to_json().items()},
+            }
         )
         logging.info('Training start!')
 
     for epoch in range(previous_epoch + 1, max_epochs + 1):
         model.train()
+        train_lr = scheduler.get_last_lr()[0]
         train_loss = 0.0
         train_total = 0
         train_y_true, train_y_pred, train_y_score = [], [], []
@@ -201,6 +205,7 @@ def train_classification(
                         title=f'Train Confusion Epoch {epoch}',
                         figsize=(cm_size, cm_size),
                     ),
+                    'learning_rate': train_lr,
                 }
             )
 
