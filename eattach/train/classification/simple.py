@@ -166,8 +166,6 @@ def train_classification(
             train_y_score.append(torch.softmax(outputs, dim=1))
             train_total += labels_.shape[0]
 
-            print(outputs.shape, labels_.shape)
-
             loss = loss_fn(outputs, labels_)
             accelerator.backward(loss)
             optimizer.step()
@@ -180,9 +178,9 @@ def train_classification(
         train_y_score = accelerator.gather(torch.concat(train_y_score))
 
         if accelerator.is_main_process:
-            train_y_true = train_y_true.cpu().numpy()
-            train_y_pred = train_y_pred.cpu().numpy()
-            train_y_score = train_y_score.cpu().numpy()
+            train_y_true = train_y_true.detach().cpu().numpy()
+            train_y_pred = train_y_pred.detach().cpu().numpy()
+            train_y_score = train_y_score.detach().cpu().numpy()
 
             session.tb_train_log(
                 global_step=epoch,
