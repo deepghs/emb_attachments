@@ -285,8 +285,9 @@ def train_classification(
 
 if __name__ == '__main__':
     logging.try_init_root(logging.INFO)
+    seed = int(os.environ.get('SEED', 0))
     train_classification(
-        workdir='runs/train_test_1l',
+        workdir=f'runs/train_test_1l_s{seed}',
         dataset_dir='/data/monochrome_danbooru',
         train_augment=transforms.Compose([
             transforms.Resize((500, 500)),
@@ -294,5 +295,6 @@ if __name__ == '__main__':
             transforms.RandomRotation((-45, 45)),
             transforms.RandomHorizontalFlip(),
             transforms.ColorJitter(0.10, 0.10, 0.05, 0.03),
-        ])
+        ]),
+        seed=seed,
     )
