@@ -23,10 +23,9 @@ def export_backbone_to_onnx(backbone_file: str, encoder: EncoderModel, problem: 
                             onnx_filename: str, verbose: bool = True, opset_version: int = 14,
                             no_optimize: bool = False):
     backbone, metadata = Backbone.load(backbone_file, with_metadata=True)
-
     model = BackboneWithHead(
         backbone=backbone.module,
-        head=problem.get_head(keep_logits=True),
+        head=problem.get_head(keep_logits=False),
     )
     model = model.float()
 
@@ -42,12 +41,12 @@ def export_backbone_to_onnx(backbone_file: str, encoder: EncoderModel, problem: 
             onnx_model_file,
             verbose=verbose,
             input_names=["input"],
-            output_names=["prediction", 'logits'],
+            output_names=["prediction"],
 
             opset_version=opset_version,
             dynamic_axes={
                 "input": {0: "batch"},
-                "prediction": {0: "batch"},
+                # "prediction": {0: "batch"},
                 "logits": {0: "batch"},
             },
             metadata_props=metadata,
