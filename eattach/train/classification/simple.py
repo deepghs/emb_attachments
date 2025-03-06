@@ -6,10 +6,14 @@ import torch
 from accelerate import Accelerator
 from ditk import logging
 from hbutils.random import global_seed
+from sklearn.metrics import accuracy_score
 from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
+from eattach.plot import plt_export, plt_confusion_matrix
 from eattach.session import TrainSession
+from eattach.train.metrics import cls_map_score, cls_auc_score
 from ...dataset import ImageDirDataset, dataset_split, WrappedImageDataset, load_labels_from_image_dir
 from ...encode import load_encoder, EncoderModel
 from ...model import Backbone, TrainModel
@@ -60,12 +64,12 @@ def train_classification(
         if init_params != backbone.init_params:
             raise RuntimeError('Init params not match, '
                                f'{backbone.init_params!r} expected but {init_params!r} found.')
-        last_epoch = metadata['train/epoch']
-        logging.info(f'Resume from epoch {last_epoch!r}.')
+        previous_epoch = metadata['train/epoch']
+        logging.info(f'Resume from epoch {previous_epoch!r}.')
     else:
         logging.info(f'No last checkpoint found, initialize {model_type!r} model with params {init_params!r}.')
         backbone = Backbone.new(type_=model_type, **init_params)
-        last_epoch = 0
+        previous_epoch = 0
     model_type, init_params = backbone.type, backbone.init_params
 
     accelerator = Accelerator(
@@ -105,6 +109,8 @@ def train_classification(
     train_dataset = WrappedImageDataset(train_dataset, encoder.preprocessor)
     test_dataset = WrappedImageDataset(test_dataset, encoder.preprocessor)
 
+    cm_size = max(6.0, len(labels_info.labels) * 0.9)
+
     model = TrainModel(
         encoder=encoder.model,
         backbone=backbone.module,
@@ -135,6 +141,66 @@ def train_classification(
 
     session = TrainSession(workdir, key_metric=key_metric)
     logging.info('Training start!')
+    for epoch in range(previous_epoch + 1, max_epochs + 1):
+        model.train()
+        train_loss = 0.0
+        train_total = 0
+        train_y_true, train_y_pred, train_y_score = [], [], []
+        for i, (inputs, labels_) in enumerate(tqdm(train_dataloader, disable=not accelerator.is_local_main_process)):
+            inputs = inputs.float().to(accelerator.device)
+            labels_ = labels_.to(accelerator.device)
+
+            optimizer.zero_grad()
+            outputs = model(inputs)
+
+            outputs_gathered = accelerator.gather(outputs)
+            labels_gathered = accelerator.gather(labels_)
+
+            train_y_true.append(labels_gathered)
+            train_y_pred.append(outputs_gathered.argmax(dim=1))
+            train_y_score.append(torch.softmax(outputs_gathered, dim=1))
+            train_total += labels_.size(0)
+
+            loss = loss_fn(outputs, labels_)
+            accelerator.backward(loss)
+            optimizer.step()
+            train_loss += loss.item() * inputs.size(0)
+            scheduler.step()
+
+        train_loss_tensor = torch.tensor(train_loss, device=accelerator.device)
+        train_total_tensor = torch.tensor(train_total, device=accelerator.device)
+        train_loss_sum = accelerator.reduce(train_loss_tensor, reduction="sum")
+        train_total_sum = accelerator.reduce(train_total_tensor, reduction="sum")
+        avg_train_loss = train_loss_sum.item() / train_total_sum.item() if train_total_sum.item() != 0 else 0.0
+
+        if train_y_true:
+            train_y_true = torch.cat(train_y_true)
+            train_y_true = accelerator.gather(train_y_true).cpu().numpy()
+        if train_y_pred:
+            train_y_pred = torch.cat(train_y_pred)
+            train_y_pred = accelerator.gather(train_y_pred).cpu().numpy()
+        if train_y_score:
+            train_y_score = torch.cat(train_y_score)
+            train_y_score = accelerator.gather(train_y_score).cpu().numpy()
+
+        if accelerator.is_local_main_process:
+            session.tb_train_log(
+                global_step=epoch,
+                metrics={
+                    'loss': avg_train_loss,
+                    'accuracy': accuracy_score(train_y_true, train_y_pred) if len(train_y_true) > 0 else 0.0,
+                    'mAP': cls_map_score(train_y_true, train_y_score, problem.labels) if len(train_y_true) > 0 else 0.0,
+                    'AUC': cls_auc_score(train_y_true, train_y_score, problem.labels) if len(train_y_true) > 0 else 0.0,
+                    'confusion': plt_export(
+                        plt_confusion_matrix,
+                        train_y_true, train_y_pred, problem.labels,
+                        title=f'Train Confusion Epoch {epoch}',
+                        figsize=(cm_size, cm_size),
+                    ) if len(train_y_true) > 0 else None,
+                }
+            )
+
+        break
 
 
 if __name__ == '__main__':
