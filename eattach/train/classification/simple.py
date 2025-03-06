@@ -79,7 +79,7 @@ def train_classification(
         if init_params != backbone.init_params:
             raise RuntimeError('Init params not match, '
                                f'{backbone.init_params!r} expected but {init_params!r} found.')
-        previous_epoch = metadata['train/epoch']
+        previous_epoch = metadata['step']
         logging.info(f'Resume from epoch {previous_epoch!r}.')
     else:
         logging.info(f'No last checkpoint found, initialize {model_type!r} model with params {init_params!r}.')
@@ -110,8 +110,12 @@ def train_classification(
             'train': train_cfg,
         }, f, indent=4, ensure_ascii=False, sort_keys=True)
 
-    dataset = ImageDirDataset(dataset_dir, labels=labels_info.labels, unsupervised=labels_info.unsupervised,
-                              no_cache=True)
+    dataset = ImageDirDataset(
+        dataset_dir,
+        labels=labels_info.labels,
+        unsupervised=labels_info.unsupervised,
+        no_cache=True,
+    )
     train_dataset, test_dataset = dataset_split(dataset, [1 - test_split_ratio, test_split_ratio])
     if train_augment:
         train_dataset = WrappedImageDataset(train_dataset, train_augment)
