@@ -73,7 +73,7 @@ class CheckpointLogger(BaseLogger):
 
             if os.path.dirname(ckpt_file):
                 os.makedirs(os.path.dirname(ckpt_file), exist_ok=True)
-            archive_pack('zip', directory=td, archive_file=ckpt_file)
+            archive_pack('zip', directory=td, archive_file=ckpt_file, silent=True)
 
     @property
     def _last_ckpt(self):
