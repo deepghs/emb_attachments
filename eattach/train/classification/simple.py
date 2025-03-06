@@ -74,7 +74,7 @@ def train_classification(
             'encoder_model': encoder_model,
         }, f, indent=4, ensure_ascii=False, sort_keys=True)
 
-    labels_info = load_labels_from_image_dir(dataset_dir)
+    labels_info = load_labels_from_image_dir(dataset_dir, unsupervised=None)
     logging.info(f'Load labels from dataset directory {dataset_dir!r}, '
                  f'labels: {labels_info.labels!r}, unsupervised: {labels_info.unsupervised!r}.')
     problem = ClassificationProblem(labels=labels_info.labels)
