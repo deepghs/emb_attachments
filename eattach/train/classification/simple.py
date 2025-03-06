@@ -125,7 +125,7 @@ def train_classification(
         backbone=backbone.module,
         head=None,
     )
-    logging.info(f'Model structure:\n{model}')
+    logging.info(f'Backbone structure:\n{backbone.module}')
 
     num_workers = num_workers or min(os.cpu_count(), batch_size)
     train_dataloader = DataLoader(
@@ -154,6 +154,7 @@ def train_classification(
             extra_metadata={
                 **{f'train/{key}': value for key, value in train_cfg.items()},
                 **{f'problem/{key}': value for key, value in problem.to_json().items()},
+                'encoder_model': encoder_model,
             }
         )
         logging.info('Training start!')
