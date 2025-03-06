@@ -118,7 +118,10 @@ def train_classification(
     test_dataloader = DataLoader(test_dataset, batch_size=batch_size, num_workers=num_workers)
 
     loss_fn = problem.get_loss_fn(loss_fn_name=loss, reduction='mean')
-    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    optimizer = torch.optim.AdamW(
+        filter(lambda p: p.requires_grad, model.parameters()),
+        lr=learning_rate, weight_decay=weight_decay
+    )
     scheduler = lr_scheduler.OneCycleLR(
         optimizer, max_lr=learning_rate,
         steps_per_epoch=len(train_dataloader), epochs=max_epochs,
