@@ -79,6 +79,9 @@ class CheckpointLogger(BaseLogger):
     def _last_ckpt(self):
         return os.path.join(self.ckpt_dir, 'last.zip')
 
+    def _step_ckpt(self, step: int):
+        return os.path.join(self.ckpt_dir, f'step-{step:06d}.zip')
+
     def _load_last(self):
         if os.path.exists(self._last_ckpt):
             meta, metrics = self._load_ckpt(self._last_ckpt)
@@ -117,6 +120,12 @@ class CheckpointLogger(BaseLogger):
         if self._best_metric_value is None or metrics[self.key_metric] > self._best_metric_value:
             self._save_ckpt(
                 ckpt_file=self._best_ckpt,
+                global_step=global_step,
+                model=model,
+                metrics=metrics,
+            )
+            self._save_ckpt(
+                ckpt_file=self._step_ckpt(global_step),
                 global_step=global_step,
                 model=model,
                 metrics=metrics,
