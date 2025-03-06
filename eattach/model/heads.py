@@ -1,3 +1,4 @@
+import torch
 from torch import nn
 
 
@@ -36,25 +37,19 @@ class TaggingHead(nn.Module):
 
 
 class RegressionHead(nn.Module):
-    def __init__(self, keep_logits: bool = False):
+    def __init__(self, means, stds, keep_logits: bool = False):
         nn.Module.__init__(self)
         self.split_head = SplitHead(keep_logits)
 
+        means = torch.tensor(means)
+        self.register_buffer('means', means)
+        self.means: torch.Tensor
+
+        stds = torch.tensor(stds)
+        self.register_buffer('stds', stds)
+        self.stds: torch.Tensor
+
     def forward(self, x):
-        pred = x
+        # N(0, 1) --> N(mean, std)
+        pred = x * self.stds + self.means
         return self.split_head(pred, x)
-
-
-_PROBLEMS = {
-    'classification': ClassificationHead,
-    'tagging': TaggingHead,
-    'regression': RegressionHead,
-}
-
-
-def get_problem_head(problem: str, keep_logits: bool = False) -> nn.Module:
-    return _PROBLEMS[problem](keep_logits=keep_logits)
-
-
-if __name__ == '__main__':
-    print(get_problem_head('classification'))

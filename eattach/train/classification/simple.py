@@ -9,6 +9,7 @@ from hbutils.random import global_seed
 from ...dataset import ImageDirDataset, dataset_split, WrappedImageDataset, load_labels_from_image_dir
 from ...encode import load_encoder, EncoderModel
 from ...model import Backbone
+from ...problem import ClassificationProblem
 
 
 def train_classification(
@@ -75,6 +76,7 @@ def train_classification(
     labels_info = load_labels_from_image_dir(dataset_dir)
     logging.info(f'Load labels from dataset directory {dataset_dir!r}, '
                  f'labels: {labels_info.labels!r}, unsupervised: {labels_info.unsupervised!r}.')
+    problem = ClassificationProblem(labels=labels_info.labels)
     dataset = ImageDirDataset(dataset_dir, labels=labels_info.labels, unsupervised=labels_info.unsupervised,
                               no_cache=True)
     train_dataset, test_dataset = dataset_split(dataset, [1 - test_split_ratio, test_split_ratio])
