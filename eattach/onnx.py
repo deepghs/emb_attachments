@@ -49,7 +49,7 @@ def export_backbone_to_onnx(backbone_file: str, encoder: EncoderModel, problem: 
                 # "prediction": {0: "batch"},
                 "logits": {0: "batch"},
             },
-            metadata_props=metadata,
+            # metadata_props=metadata,
         )
 
         model = onnx.load(onnx_model_file)
