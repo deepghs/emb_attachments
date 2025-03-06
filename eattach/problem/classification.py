@@ -1,11 +1,12 @@
 from dataclasses import dataclass
 from typing import List
 
-from .base import Problem
+from .base import Problem, register_problem
 from ..loss import get_loss_fn
 from ..model import ClassificationHead
 
 
+@register_problem('classification')
 @dataclass
 class ClassificationProblem(Problem):
     labels: List[str]
@@ -26,3 +27,7 @@ class ClassificationProblem(Problem):
             'type': 'classification',
             'labels': self.labels,
         }
+
+    @classmethod
+    def load(cls, labels: List[str]) -> 'ClassificationProblem':
+        return cls(labels=labels)

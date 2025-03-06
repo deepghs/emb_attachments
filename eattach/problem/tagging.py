@@ -1,10 +1,11 @@
 from dataclasses import dataclass
 from typing import List
 
-from .base import Problem
+from .base import Problem, register_problem
 from ..model import TaggingHead
 
 
+@register_problem('tagging')
 @dataclass
 class TaggingProblem(Problem):
     tags: List[str]
@@ -20,3 +21,7 @@ class TaggingProblem(Problem):
             'type': 'tagging',
             'tags': self.tags,
         }
+
+    @classmethod
+    def load(cls, tags: List[str]) -> 'TaggingProblem':
+        return cls(tags=tags)

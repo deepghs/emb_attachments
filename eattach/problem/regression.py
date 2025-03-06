@@ -1,10 +1,11 @@
 from dataclasses import dataclass
 from typing import List, Tuple
 
-from .base import Problem
+from .base import Problem, register_problem
 from ..model import RegressionHead
 
 
+@register_problem('regression')
 @dataclass
 class RegressionProblem(Problem):
     fields: List[Tuple[str, float, float]]
@@ -31,3 +32,11 @@ class RegressionProblem(Problem):
                 for field_name, mean, std in self.fields
             ]
         }
+
+    @classmethod
+    def load(cls, fields: List[dict]) -> 'RegressionProblem':
+        return cls(
+            fields=[
+                (field['name'], field['mean'], field['std']) for field in fields
+            ]
+        )

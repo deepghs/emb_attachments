@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Dict, Type
 
 
 @dataclass
@@ -11,3 +12,18 @@ class Problem:
 
     def to_json(self):
         raise NotImplementedError
+
+    @classmethod
+    def load(cls, **kwargs):
+        raise NotImplementedError
+
+
+_PROBLEM_CLS: Dict[str, Type[Problem]] = {}
+
+
+def register_problem(name: str):
+    def _decorator(cls):
+        _PROBLEM_CLS[name] = cls
+        return cls
+
+    return _decorator
