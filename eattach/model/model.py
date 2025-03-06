@@ -46,4 +46,4 @@ class BackboneWithHead(nn.Module):
 
     def forward(self, x):
         logits = self.backbone(x)
-        return logits, self.head(logits)
+        return self.head(logits)

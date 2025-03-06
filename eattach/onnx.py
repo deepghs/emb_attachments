@@ -25,38 +25,31 @@ def export_backbone_to_onnx(backbone_file: str, encoder: EncoderModel, problem: 
     backbone, metadata = Backbone.load(backbone_file, with_metadata=True)
     model = BackboneWithHead(
         backbone=backbone.module,
-        head=problem.get_head(keep_logits=False),
+        head=problem.get_head(keep_logits=True),
     )
     model = model.float()
 
     dummy_input = torch.randn(1, encoder.width)
     dummy_input = dummy_input.float()
 
-    with torch.no_grad():
-        dummy_output = model(dummy_input)
-    print(dummy_output[0].shape, dummy_output[1].shape)
-    print(dummy_output)
-    print(dummy_output.shape)
-    quit()
-
     with torch.no_grad(), TemporaryDirectory() as td:
         onnx_model_file = os.path.join(td, 'model.onnx')
-        logging.info(f'Onnx data exporting to {onnx_model_file!r} ...')
+        logging.info(f'Onnx data exporting to {onnx_model_file!r}, with metadata {metadata!r} ...')
         torch.onnx.export(
             model,
             (dummy_input,),
             onnx_model_file,
             verbose=verbose,
             input_names=["input"],
-            output_names=["prediction"],
+            output_names=["prediction", "logits"],
 
             opset_version=opset_version,
             dynamic_axes={
                 "input": {0: "batch"},
-                # "prediction": {0: "batch"},
+                "prediction": {0: "batch"},
                 "logits": {0: "batch"},
             },
-            # metadata_props=metadata,
+            metadata_props=metadata,
         )
 
         model = onnx.load(onnx_model_file)
