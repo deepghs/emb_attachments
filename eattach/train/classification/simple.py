@@ -14,6 +14,7 @@ from ...problem import ClassificationProblem
 
 def train_classification(
         workdir: str,
+        dataset_dir: str,
 
         # model configuration
         encoder_model: str = 'wdtagger:SmilingWolf/wd-swinv2-tagger-v3',
@@ -21,7 +22,6 @@ def train_classification(
         init_params: dict = None,
 
         # dataset configuration
-        dataset_dir: Optional[str] = None,
         train_augment: Optional[Callable] = None,
         test_split_ratio: float = 0.2,
 
@@ -96,4 +96,12 @@ def train_classification(
     accelerator = Accelerator(
         # mixed_precision=self.cfgs.mixed_precision,
         step_scheduler_with_optimizer=False,
+    )
+
+
+if __name__ == '__main__':
+    logging.try_init_root(logging.INFO)
+    train_classification(
+        workdir='runs/train_test',
+        dataset_dir='/data/monochrome_danbooru',
     )
