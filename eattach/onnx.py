@@ -7,6 +7,7 @@ import onnxsim
 import torch
 from ditk import logging
 from hbutils.system import TemporaryDirectory
+from natsort import natsorted
 
 from eattach.model import Backbone, BackboneWithHead
 from .encode import EncoderModel
@@ -61,7 +62,7 @@ def export_backbone_to_onnx(backbone_file: str, encoder: EncoderModel, problem: 
         if output_model_dir:
             os.makedirs(output_model_dir, exist_ok=True)
 
-        for k, v in metadata.items():
+        for k, v in natsorted(metadata.items()):
             v = json.dumps(v)
             logging.info(f'Adding metadata {k!r} = {v!r} ...')
             assert isinstance(v, str)
