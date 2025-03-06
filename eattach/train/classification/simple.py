@@ -33,11 +33,11 @@ def train_classification(
         # train hyperparams
         max_epochs: int = 100,
         batch_size: int = 16,
-        seed: Optional[int] = 0,
         learning_rate: float = 0.001,
         weight_decay: float = 1e-3,
         key_metric: str = 'accuracy',
         loss: str = 'focal',
+        seed: Optional[int] = 0,
 ):
     if seed is not None:
         # native random, numpy, torch and faker's seeds are includes
@@ -82,6 +82,7 @@ def train_classification(
         'loss': loss,
         'learning_rate': learning_rate,
         'weight_decay': weight_decay,
+        'key_metric': key_metric,
     }
     with open(os.path.join(workdir, 'meta.json'), 'w') as f:
         json.dump({
@@ -89,6 +90,7 @@ def train_classification(
             'model_type': model_type,
             'init_params': init_params,
             'encoder_model': encoder_model,
+            'train': train_cfg,
         }, f, indent=4, ensure_ascii=False, sort_keys=True)
 
     labels_info = load_labels_from_image_dir(dataset_dir, unsupervised=None)
