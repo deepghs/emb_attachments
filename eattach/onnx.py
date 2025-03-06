@@ -34,6 +34,8 @@ def export_backbone_to_onnx(backbone_file: str, encoder: EncoderModel, problem: 
 
     with torch.no_grad():
         dummy_output = model(dummy_input)
+    print(dummy_output[0].shape, dummy_output[1].shape)
+    print(dummy_output)
     print(dummy_output.shape)
     quit()
 
