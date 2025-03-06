@@ -13,6 +13,11 @@ from ..model import Backbone
 
 
 class CheckpointLogger(BaseLogger):
+    __GLOBAL_METADATA__ = {
+        'copyright': 'DeepGHS (https://github.com/deepghs)',
+        'homepage': 'https://github.com/deepghs/emb_attachments',
+    }
+
     def __init__(self, workdir: str, key_metric: str = 'accuracy',
                  extra_metadata: Optional[Dict[str, Any]] = None, **kwargs):
         BaseLogger.__init__(self, workdir, **kwargs)
@@ -57,6 +62,7 @@ class CheckpointLogger(BaseLogger):
             model.save(
                 ckpt_file=os.path.join(td, 'model.safetensors'),
                 extra_metadata={
+                    **self.__GLOBAL_METADATA__,
                     **self.extra_metadata,
                     **{
                         f'metrics/{key}': value for key, value in metrics.items()
