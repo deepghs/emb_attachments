@@ -15,7 +15,7 @@ from hbutils.encoding import sha3
 from hfutils.archive import archive_unpack
 from huggingface_hub import HfApi, CommitOperationAdd
 
-from eattach.model import Backbone, BackboneWithHead
+from eattach.model import Backbone
 from .encode import load_encoder
 from .onnx import export_backbone_to_onnx
 from .problem import load_problem
@@ -73,11 +73,7 @@ def export_model(workdir: str, logfile_anonymous: bool = True, verbose: bool = T
         files.append((onnx_file, 'model.onnx'))
 
         backbone, metadata = Backbone.load(backbone_file, with_metadata=True)
-        model = BackboneWithHead(
-            backbone=backbone.module,
-            head=problem.get_head(keep_logits=True),
-        )
-        model = model.float()
+        model = backbone.module.float()
         dummy_input = torch.randn(1, encoder.width)
         dummy_input = dummy_input.float()
         flops, params = torch_model_profile(model=model, input_=dummy_input)
