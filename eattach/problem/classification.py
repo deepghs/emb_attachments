@@ -20,3 +20,9 @@ class ClassificationProblem(Problem):
 
     def get_head(self, keep_logits: bool = False):
         return ClassificationHead(keep_logits=keep_logits)
+
+    def to_json(self):
+        return {
+            'type': 'classification',
+            'labels': self.labels,
+        }

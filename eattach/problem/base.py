@@ -8,3 +8,6 @@ class Problem:
 
     def get_head(self, keep_logits: bool = False):
         raise NotImplementedError
+
+    def to_json(self):
+        raise NotImplementedError

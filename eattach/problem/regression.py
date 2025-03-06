@@ -18,3 +18,16 @@ class RegressionProblem(Problem):
             means.append(mean)
             stds.append(std)
         return RegressionHead(means=means, stds=stds, keep_logits=keep_logits)
+
+    def to_json(self):
+        return {
+            'type': 'regression',
+            'fields': [
+                {
+                    'name': field_name,
+                    'mean': mean,
+                    'std': std,
+                }
+                for field_name, mean, std in self.fields
+            ]
+        }

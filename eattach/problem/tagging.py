@@ -14,3 +14,9 @@ class TaggingProblem(Problem):
 
     def get_head(self, keep_logits: bool = False):
         return TaggingHead(keep_logits=keep_logits)
+
+    def to_json(self):
+        return {
+            'type': 'tagging',
+            'tags': self.tags,
+        }

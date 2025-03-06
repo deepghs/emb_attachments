@@ -9,16 +9,17 @@ from hbutils.random import global_seed
 from sklearn.metrics import accuracy_score
 from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader
+from torchvision import transforms
 from tqdm import tqdm
 
-from eattach.plot import plt_export, plt_confusion_matrix, plt_p_curve, plt_r_curve, plt_pr_curve, plt_f1_curve, \
-    plt_roc_curve
-from eattach.session import TrainSession
-from eattach.train.metrics import cls_map_score, cls_auc_score
-from ...dataset import ImageDirDataset, dataset_split, WrappedImageDataset, load_labels_from_image_dir
+from ..metrics import cls_map_score, cls_auc_score
+from ...dataset import ImageDirDataset, dataset_split, WrappedImageDataset, load_labels_from_image_dir, RangeRandomCrop
 from ...encode import load_encoder, EncoderModel
 from ...model import Backbone, TrainModel
+from ...plot import plt_export, plt_confusion_matrix, plt_p_curve, plt_r_curve, plt_pr_curve, plt_f1_curve, \
+    plt_roc_curve
 from ...problem import ClassificationProblem
+from ...session import TrainSession
 
 DEFAULT_INIT_PARAMS = {
     'layers': [0.5, 0.3],
@@ -102,7 +103,7 @@ def train_classification(
     }
     with open(os.path.join(workdir, 'meta.json'), 'w') as f:
         json.dump({
-            'problem': 'classification',
+            'problem': problem.to_json(),
             'model_type': model_type,
             'init_params': init_params,
             'encoder_model': encoder_model,
@@ -275,4 +276,11 @@ if __name__ == '__main__':
     train_classification(
         workdir='runs/train_test',
         dataset_dir='/data/monochrome_danbooru',
+        train_augment=transforms.Compose([
+            transforms.Resize((500, 500)),
+            RangeRandomCrop((400, 500), padding=0, pad_if_needed=True, padding_mode='reflect'),
+            transforms.RandomRotation((-45, 45)),
+            transforms.RandomHorizontalFlip(),
+            transforms.ColorJitter(0.10, 0.10, 0.05, 0.03),
+        ])
     )
