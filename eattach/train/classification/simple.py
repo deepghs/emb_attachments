@@ -1,21 +1,37 @@
 import json
 import os
-from typing import Optional
+from typing import Optional, Callable
 
 from accelerate import Accelerator
 from ditk import logging
 from hbutils.random import global_seed
 from torch.utils.data import Dataset
 
-from eattach.model import Backbone
+from ...dataset import ImageDirDataset, dataset_split, WrappedImageDataset
+from ...encode import load_encoder, EncoderModel
+from ...model import Backbone
 
 
 def train_classification(
-        workdir: str, model_type: str = 'mlp', init_params: dict = None,
-        encode_system: str = 'imgutils.tagging.wd14', model_name: str = 'SwinV2_v3',
-        dataset_dir: Optional[str] = None, dataset: Optional[Dataset] = None,
-        train_dataset: Optional[Dataset] = None, test_dataset: Optional[Dataset] = None,
-        batch_size: int = 16, seed: Optional[int] = 0,
+        workdir: str,
+
+        # model configuration
+        encoder_model: str = 'wdtagger:SmilingWolf/wd-swinv2-tagger-v3',
+        model_type: str = 'mlp',
+        init_params: dict = None,
+
+        # dataset configuration
+        dataset_dir: Optional[str] = None,
+        dataset: Optional[Dataset] = None,
+        train_dataset: Optional[Dataset] = None,
+        test_dataset: Optional[Dataset] = None,
+        train_augment: Optional[Callable] = None,
+        test_split_ratio: float = 0.2,
+
+        # train hyperparams
+        max_epoch: int = 100,
+        batch_size: int = 16,
+        seed: Optional[int] = 0,
 ):
     if seed is not None:
         # native random, numpy, torch and faker's seeds are includes
@@ -38,16 +54,19 @@ def train_classification(
         if init_params != backbone.init_params:
             raise RuntimeError('Init params not match, '
                                f'{backbone.init_params!r} expected but {init_params!r} found.')
-        last_step = metadata['train/step']
-        logging.info(f'Resume from step {last_step!r}.')
+        last_epoch = metadata['train/epoch']
+        logging.info(f'Resume from epoch {last_epoch!r}.')
     else:
         logging.info(f'No last checkpoint found, initialize {model_type!r} model with params {init_params!r}.')
         backbone = Backbone.new(type_=model_type, **init_params)
-        last_step = 0
+        last_epoch = 0
     model_type, init_params = backbone.type, backbone.init_params
+
+    encoder: EncoderModel = load_encoder(encoder_model)
 
     train_cfg = {
         'batch_size': batch_size,
+        'seed': seed,
     }
     with open(os.path.join(workdir, 'meta.json'), 'w') as f:
         json.dump({
@@ -55,6 +74,16 @@ def train_classification(
             'model_type': model_type,
             'init_params': init_params,
         }, f, indent=4, ensure_ascii=False, sort_keys=True)
+
+    if not train_dataset or not test_dataset:
+        if not dataset:
+            dataset = ImageDirDataset(dataset_dir, LABELS, no_cache=True)
+
+        train_dataset, test_dataset = dataset_split(dataset, [1 - test_split_ratio, test_split_ratio])
+        if train_augment:
+            train_dataset = WrappedImageDataset(train_dataset, train_augment)
+    train_dataset = WrappedImageDataset(train_dataset, encoder.preprocessor)
+    test_dataset = WrappedImageDataset(test_dataset, encoder.preprocessor)
 
     accelerator = Accelerator(
         # mixed_precision=self.cfgs.mixed_precision,
