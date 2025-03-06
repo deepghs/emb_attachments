@@ -32,6 +32,11 @@ def export_backbone_to_onnx(backbone_file: str, encoder: EncoderModel, problem: 
     dummy_input = torch.randn(1, encoder.width)
     dummy_input = dummy_input.float()
 
+    with torch.no_grad():
+        dummy_output = model(dummy_input)
+    print(dummy_output.shape)
+    quit()
+
     with torch.no_grad(), TemporaryDirectory() as td:
         onnx_model_file = os.path.join(td, 'model.onnx')
         logging.info(f'Onnx data exporting to {onnx_model_file!r} ...')
