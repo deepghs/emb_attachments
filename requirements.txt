@@ -22,3 +22,4 @@ onnxoptimizer
 onnxsim
 onnxruntime
 thop
+tabulate
