@@ -5,9 +5,8 @@ from typing import Optional, Callable
 from accelerate import Accelerator
 from ditk import logging
 from hbutils.random import global_seed
-from torch.utils.data import Dataset
 
-from ...dataset import ImageDirDataset, dataset_split, WrappedImageDataset
+from ...dataset import ImageDirDataset, dataset_split, WrappedImageDataset, load_labels_from_image_dir
 from ...encode import load_encoder, EncoderModel
 from ...model import Backbone
 
@@ -22,9 +21,6 @@ def train_classification(
 
         # dataset configuration
         dataset_dir: Optional[str] = None,
-        dataset: Optional[Dataset] = None,
-        train_dataset: Optional[Dataset] = None,
-        test_dataset: Optional[Dataset] = None,
         train_augment: Optional[Callable] = None,
         test_split_ratio: float = 0.2,
 
@@ -73,15 +69,17 @@ def train_classification(
             'problem': 'classification',
             'model_type': model_type,
             'init_params': init_params,
+            'encoder_model': encoder_model,
         }, f, indent=4, ensure_ascii=False, sort_keys=True)
 
-    if not train_dataset or not test_dataset:
-        if not dataset:
-            dataset = ImageDirDataset(dataset_dir, LABELS, no_cache=True)
-
-        train_dataset, test_dataset = dataset_split(dataset, [1 - test_split_ratio, test_split_ratio])
-        if train_augment:
-            train_dataset = WrappedImageDataset(train_dataset, train_augment)
+    labels_info = load_labels_from_image_dir(dataset_dir)
+    logging.info(f'Load labels from dataset directory {dataset_dir!r}, '
+                 f'labels: {labels_info.labels!r}, unsupervised: {labels_info.unsupervised!r}.')
+    dataset = ImageDirDataset(dataset_dir, labels=labels_info.labels, unsupervised=labels_info.unsupervised,
+                              no_cache=True)
+    train_dataset, test_dataset = dataset_split(dataset, [1 - test_split_ratio, test_split_ratio])
+    if train_augment:
+        train_dataset = WrappedImageDataset(train_dataset, train_augment)
     train_dataset = WrappedImageDataset(train_dataset, encoder.preprocessor)
     test_dataset = WrappedImageDataset(test_dataset, encoder.preprocessor)
 
