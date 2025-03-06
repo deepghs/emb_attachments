@@ -8,7 +8,7 @@ from hbutils.random import global_seed
 
 from ...dataset import ImageDirDataset, dataset_split, WrappedImageDataset, load_labels_from_image_dir
 from ...encode import load_encoder, EncoderModel
-from ...model import Backbone
+from ...model import Backbone, TrainModel
 from ...problem import ClassificationProblem
 
 
@@ -63,6 +63,7 @@ def train_classification(
 
     train_cfg = {
         'batch_size': batch_size,
+        'max_epoch': max_epoch,
         'seed': seed,
     }
     with open(os.path.join(workdir, 'meta.json'), 'w') as f:
@@ -84,6 +85,13 @@ def train_classification(
         train_dataset = WrappedImageDataset(train_dataset, train_augment)
     train_dataset = WrappedImageDataset(train_dataset, encoder.preprocessor)
     test_dataset = WrappedImageDataset(test_dataset, encoder.preprocessor)
+
+    model = TrainModel(
+        encoder=encoder.model,
+        backbone=backbone.module,
+        head=None,
+    )
+    print(model)
 
     accelerator = Accelerator(
         # mixed_precision=self.cfgs.mixed_precision,
