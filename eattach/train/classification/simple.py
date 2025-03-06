@@ -2,10 +2,14 @@ import json
 import os
 from typing import Optional, Callable
 
+import torch
 from accelerate import Accelerator
 from ditk import logging
 from hbutils.random import global_seed
+from torch.optim import lr_scheduler
+from torch.utils.data import DataLoader
 
+from eattach.session import TrainSession
 from ...dataset import ImageDirDataset, dataset_split, WrappedImageDataset, load_labels_from_image_dir
 from ...encode import load_encoder, EncoderModel
 from ...model import Backbone, TrainModel
@@ -22,13 +26,18 @@ def train_classification(
         init_params: dict = None,
 
         # dataset configuration
+        num_workers: int = 8,
         train_augment: Optional[Callable] = None,
         test_split_ratio: float = 0.2,
 
         # train hyperparams
-        max_epoch: int = 100,
+        max_epochs: int = 100,
         batch_size: int = 16,
         seed: Optional[int] = 0,
+        learning_rate: float = 0.001,
+        weight_decay: float = 1e-3,
+        key_metric: str = 'accuracy',
+        loss: str = 'focal',
 ):
     if seed is not None:
         # native random, numpy, torch and faker's seeds are includes
@@ -59,12 +68,20 @@ def train_classification(
         last_epoch = 0
     model_type, init_params = backbone.type, backbone.init_params
 
+    accelerator = Accelerator(
+        # mixed_precision=self.cfgs.mixed_precision,
+        step_scheduler_with_optimizer=False,
+    )
+
     encoder: EncoderModel = load_encoder(encoder_model)
 
     train_cfg = {
         'batch_size': batch_size,
-        'max_epoch': max_epoch,
+        'max_epochs': max_epochs,
         'seed': seed,
+        'loss': loss,
+        'learning_rate': learning_rate,
+        'weight_decay': weight_decay,
     }
     with open(os.path.join(workdir, 'meta.json'), 'w') as f:
         json.dump({
@@ -91,12 +108,28 @@ def train_classification(
         backbone=backbone.module,
         head=None,
     )
-    print(model)
+    logging.info(f'Model structure:\n{model}')
 
-    accelerator = Accelerator(
-        # mixed_precision=self.cfgs.mixed_precision,
-        step_scheduler_with_optimizer=False,
+    num_workers = num_workers or min(os.cpu_count(), batch_size)
+    train_dataloader = DataLoader(
+        train_dataset, batch_size=batch_size,
+        shuffle=True, num_workers=num_workers, drop_last=True
     )
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, num_workers=num_workers)
+
+    loss_fn = problem.get_loss_fn(loss_fn_name=loss, reduction='mean')
+    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    scheduler = lr_scheduler.OneCycleLR(
+        optimizer, max_lr=learning_rate,
+        steps_per_epoch=len(train_dataloader), epochs=max_epochs,
+        pct_start=0.15, final_div_factor=20.
+    )
+
+    model, optimizer, train_dataloader, test_dataloader, scheduler, loss_fn = \
+        accelerator.prepare(model, optimizer, train_dataloader, test_dataloader, scheduler, loss_fn)
+
+    session = TrainSession(workdir, key_metric=key_metric)
+    logging.info('Training start!')
 
 
 if __name__ == '__main__':
