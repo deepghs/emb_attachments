@@ -11,7 +11,8 @@ from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from eattach.plot import plt_export, plt_confusion_matrix
+from eattach.plot import plt_export, plt_confusion_matrix, plt_p_curve, plt_r_curve, plt_pr_curve, plt_f1_curve, \
+    plt_roc_curve
 from eattach.session import TrainSession
 from eattach.train.metrics import cls_map_score, cls_auc_score
 from ...dataset import ImageDirDataset, dataset_split, WrappedImageDataset, load_labels_from_image_dir
@@ -46,6 +47,7 @@ def train_classification(
         key_metric: str = 'accuracy',
         loss: str = 'focal',
         seed: Optional[int] = 0,
+        eval_epoch: int = 1,
 ):
     if seed is not None:
         # native random, numpy, torch and faker's seeds are includes
@@ -146,7 +148,10 @@ def train_classification(
         accelerator.prepare(model, optimizer, train_dataloader, test_dataloader, scheduler, loss_fn)
 
     if accelerator.is_main_process:
-        session = TrainSession(workdir, key_metric=key_metric)
+        session = TrainSession(
+            workdir, key_metric=key_metric,
+            extra_metadata={f'train/{key}': value for key, value in train_cfg.items()}
+        )
         logging.info('Training start!')
 
     for epoch in range(previous_epoch + 1, max_epochs + 1):
@@ -198,7 +203,71 @@ def train_classification(
                 }
             )
 
-        break
+        if epoch % eval_epoch == 0:
+            model.eval()
+            with torch.no_grad():
+                test_loss = 0.0
+                test_total = 0
+                test_y_true, test_y_pred, test_y_score = [], [], []
+
+                for i, (inputs, labels_) in enumerate(tqdm(test_dataloader, disable=not accelerator.is_main_process)):
+                    inputs = inputs.float()
+                    labels_ = labels_.long()
+
+                    outputs = model(inputs)
+                    test_y_true.append(labels_)
+                    test_y_pred.append(outputs.argmax(dim=1))
+                    test_y_score.append(torch.softmax(outputs, dim=1))
+                    test_total += labels_.shape[0]
+
+                    loss = loss_fn(outputs, labels_)
+                    test_loss += loss.item() * inputs.size(0)
+
+                test_y_true = accelerator.gather_for_metrics(torch.concat(test_y_true))
+                test_y_pred = accelerator.gather_for_metrics(torch.concat(test_y_pred))
+                test_y_score = accelerator.gather_for_metrics(torch.concat(test_y_score))
+
+                if accelerator.is_main_process:
+                    test_y_true = test_y_true.detach().cpu().numpy()
+                    test_y_pred = test_y_pred.detach().cpu().numpy()
+                    test_y_score = test_y_score.detach().cpu().numpy()
+
+                    session.tb_eval_log(
+                        global_step=epoch,
+                        model=backbone,
+                        metrics={
+                            'loss': test_loss / test_total,
+                            'accuracy': accuracy_score(test_y_true, test_y_pred),
+                            'mAP': cls_map_score(test_y_true, test_y_score, problem.labels),
+                            'AUC': cls_auc_score(test_y_true, test_y_score, problem.labels),
+                            'confusion': plt_export(
+                                plt_confusion_matrix,
+                                test_y_true, test_y_pred, problem.labels,
+                                title=f'Test Confusion Epoch {epoch}',
+                                figsize=(cm_size, cm_size),
+                            ),
+                            'p_curve': plt_export(
+                                plt_p_curve, test_y_true, test_y_score, problem.labels,
+                                title=f'Precision Epoch {epoch}',
+                            ),
+                            'r_curve': plt_export(
+                                plt_r_curve, test_y_true, test_y_score, problem.labels,
+                                title=f'Recall Epoch {epoch}',
+                            ),
+                            'pr_curve': plt_export(
+                                plt_pr_curve, test_y_true, test_y_score, problem.labels,
+                                title=f'PR Curve Epoch {epoch}',
+                            ),
+                            'f1_curve': plt_export(
+                                plt_f1_curve, test_y_true, test_y_score, problem.labels,
+                                title=f'F1 Curve Epoch {epoch}',
+                            ),
+                            'roc_curve': plt_export(
+                                plt_roc_curve, test_y_true, test_y_score, problem.labels,
+                                title=f'ROC Curve Epoch {epoch}',
+                            ),
+                        }
+                    )
 
 
 if __name__ == '__main__':

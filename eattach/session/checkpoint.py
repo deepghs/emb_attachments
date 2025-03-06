@@ -61,7 +61,8 @@ class CheckpointLogger(BaseLogger):
                     **{
                         f'metrics/{key}': value for key, value in metrics.items()
                         if not isinstance(value, Image.Image)
-                    }
+                    },
+                    'step': global_step,
                 }
             )
             for key, value in metrics.items():
