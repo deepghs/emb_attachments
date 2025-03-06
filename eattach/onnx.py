@@ -34,7 +34,7 @@ def export_backbone_to_onnx(backbone_file: str, encoder: EncoderModel, problem: 
 
     with torch.no_grad(), TemporaryDirectory() as td:
         onnx_model_file = os.path.join(td, 'model.onnx')
-        logging.info(f'Onnx data exporting to {onnx_model_file!r}, with metadata {metadata!r} ...')
+        logging.info(f'Onnx data exporting to {onnx_model_file!r} ...')
         torch.onnx.export(
             model,
             (dummy_input,),
@@ -49,7 +49,6 @@ def export_backbone_to_onnx(backbone_file: str, encoder: EncoderModel, problem: 
                 "prediction": {0: "batch"},
                 "logits": {0: "batch"},
             },
-            metadata_props=metadata,
         )
 
         model = onnx.load(onnx_model_file)
@@ -60,5 +59,12 @@ def export_backbone_to_onnx(backbone_file: str, encoder: EncoderModel, problem: 
         output_model_dir, _ = os.path.split(onnx_filename)
         if output_model_dir:
             os.makedirs(output_model_dir, exist_ok=True)
+
+        for k, v in metadata.items():
+            logging.info(f'Adding metadata {k!r} = {v!r} ...')
+            assert isinstance(v, str)
+            meta = model.metadata_props.add()
+            meta.key, meta.value = k, v
+
         logging.info(f'Complete model saving to {onnx_filename!r} ...')
         onnx.save(model, onnx_filename)
