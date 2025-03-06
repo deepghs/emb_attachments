@@ -100,7 +100,9 @@ def train_classification(
         'learning_rate': learning_rate,
         'weight_decay': weight_decay,
         'key_metric': key_metric,
+        'processes': accelerator.num_processes,
     }
+    logging.info(f'Training configurations: {train_cfg!r}.')
     with open(os.path.join(workdir, 'meta.json'), 'w') as f:
         json.dump({
             'problem': problem.to_json(),
