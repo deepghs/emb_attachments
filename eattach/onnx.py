@@ -1,3 +1,4 @@
+import json
 import os
 
 import onnx
@@ -61,6 +62,7 @@ def export_backbone_to_onnx(backbone_file: str, encoder: EncoderModel, problem: 
             os.makedirs(output_model_dir, exist_ok=True)
 
         for k, v in metadata.items():
+            v = json.dumps(v)
             logging.info(f'Adding metadata {k!r} = {v!r} ...')
             assert isinstance(v, str)
             meta = model.metadata_props.add()
