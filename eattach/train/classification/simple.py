@@ -139,27 +139,26 @@ def train_classification(
     model, optimizer, train_dataloader, test_dataloader, scheduler, loss_fn = \
         accelerator.prepare(model, optimizer, train_dataloader, test_dataloader, scheduler, loss_fn)
 
-    session = TrainSession(workdir, key_metric=key_metric)
-    logging.info('Training start!')
+    if accelerator.is_main_process:
+        session = TrainSession(workdir, key_metric=key_metric)
+        logging.info('Training start!')
+
     for epoch in range(previous_epoch + 1, max_epochs + 1):
         model.train()
         train_loss = 0.0
         train_total = 0
         train_y_true, train_y_pred, train_y_score = [], [], []
-        for i, (inputs, labels_) in enumerate(tqdm(train_dataloader, disable=not accelerator.is_local_main_process)):
-            inputs = inputs.float().to(accelerator.device)
-            labels_ = labels_.to(accelerator.device)
+
+        for i, (inputs, labels_) in enumerate(tqdm(train_dataloader, disable=not accelerator.is_main_process)):
+            inputs = inputs.float()
+            labels_ = labels_
 
             optimizer.zero_grad()
             outputs = model(inputs)
-
-            outputs_gathered = accelerator.gather(outputs)
-            labels_gathered = accelerator.gather(labels_)
-
-            train_y_true.append(labels_gathered)
-            train_y_pred.append(outputs_gathered.argmax(dim=1))
-            train_y_score.append(torch.softmax(outputs_gathered, dim=1))
-            train_total += labels_.size(0)
+            train_y_true.append(labels_)
+            train_y_pred.append(outputs.argmax(dim=1))
+            train_y_score.append(torch.softmax(outputs, dim=1))
+            train_total += labels_.shape[0]
 
             loss = loss_fn(outputs, labels_)
             accelerator.backward(loss)
@@ -167,36 +166,29 @@ def train_classification(
             train_loss += loss.item() * inputs.size(0)
             scheduler.step()
 
-        train_loss_tensor = torch.tensor(train_loss, device=accelerator.device)
-        train_total_tensor = torch.tensor(train_total, device=accelerator.device)
-        train_loss_sum = accelerator.reduce(train_loss_tensor, reduction="sum")
-        train_total_sum = accelerator.reduce(train_total_tensor, reduction="sum")
-        avg_train_loss = train_loss_sum.item() / train_total_sum.item() if train_total_sum.item() != 0 else 0.0
+        # Gather results from all processes
+        train_y_true = accelerator.gather(torch.concat(train_y_true))
+        train_y_pred = accelerator.gather(torch.concat(train_y_pred))
+        train_y_score = accelerator.gather(torch.concat(train_y_score))
 
-        if train_y_true:
-            train_y_true = torch.cat(train_y_true)
-            train_y_true = accelerator.gather(train_y_true).cpu().numpy()
-        if train_y_pred:
-            train_y_pred = torch.cat(train_y_pred)
-            train_y_pred = accelerator.gather(train_y_pred).cpu().numpy()
-        if train_y_score:
-            train_y_score = torch.cat(train_y_score)
-            train_y_score = accelerator.gather(train_y_score).cpu().numpy()
+        if accelerator.is_main_process:
+            train_y_true = train_y_true.cpu().numpy()
+            train_y_pred = train_y_pred.cpu().numpy()
+            train_y_score = train_y_score.cpu().numpy()
 
-        if accelerator.is_local_main_process:
             session.tb_train_log(
                 global_step=epoch,
                 metrics={
-                    'loss': avg_train_loss,
-                    'accuracy': accuracy_score(train_y_true, train_y_pred) if len(train_y_true) > 0 else 0.0,
-                    'mAP': cls_map_score(train_y_true, train_y_score, problem.labels) if len(train_y_true) > 0 else 0.0,
-                    'AUC': cls_auc_score(train_y_true, train_y_score, problem.labels) if len(train_y_true) > 0 else 0.0,
+                    'loss': train_loss / train_total,
+                    'accuracy': accuracy_score(train_y_true, train_y_pred),
+                    'mAP': cls_map_score(train_y_true, train_y_score, problem.labels),
+                    'AUC': cls_auc_score(train_y_true, train_y_score, problem.labels),
                     'confusion': plt_export(
                         plt_confusion_matrix,
                         train_y_true, train_y_pred, problem.labels,
                         title=f'Train Confusion Epoch {epoch}',
                         figsize=(cm_size, cm_size),
-                    ) if len(train_y_true) > 0 else None,
+                    ),
                 }
             )
 
