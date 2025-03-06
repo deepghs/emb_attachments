@@ -1,1 +1,1 @@
-from .instancedir import InstanceDirDataset
+from .imagedir import ImageDirDataset
