@@ -22,7 +22,7 @@ from ...problem import ClassificationProblem
 from ...session import TrainSession
 
 DEFAULT_INIT_PARAMS = {
-    'layers': [0.5, 0.3],
+    'layers': [0.5],
 }
 
 
@@ -280,7 +280,7 @@ def train_classification(
 if __name__ == '__main__':
     logging.try_init_root(logging.INFO)
     train_classification(
-        workdir='runs/train_test',
+        workdir='runs/train_test_1l',
         dataset_dir='/data/monochrome_danbooru',
         train_augment=transforms.Compose([
             transforms.Resize((500, 500)),
