@@ -6,8 +6,6 @@ from typing import List, Optional
 from imgutils.data import load_image
 from torch.utils.data import Dataset
 
-mimetypes.add_type('image/webp', '.webp')
-
 
 class ImageDirDataset(Dataset):
     def __init__(self, image_dir, labels: List[str], unsupervised: Optional[str] = None, transform=None,
