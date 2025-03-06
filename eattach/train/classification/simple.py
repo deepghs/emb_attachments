@@ -45,7 +45,7 @@ def train_classification(
         batch_size: int = 16,
         learning_rate: float = 0.001,
         weight_decay: float = 1e-3,
-        key_metric: str = 'accuracy',
+        key_metric: str = 'AUC',
         loss: str = 'focal',
         seed: Optional[int] = 0,
         eval_epoch: int = 1,
