@@ -19,6 +19,10 @@ from ...encode import load_encoder, EncoderModel
 from ...model import Backbone, TrainModel
 from ...problem import ClassificationProblem
 
+DEFAULT_INIT_PARAMS = {
+    'layers': [0.5, 0.3],
+}
+
 
 def train_classification(
         workdir: str,
@@ -52,7 +56,15 @@ def train_classification(
 
     os.makedirs(workdir, exist_ok=True)
 
-    init_params = dict(init_params or {})
+    labels_info = load_labels_from_image_dir(dataset_dir, unsupervised=None)
+    logging.info(f'Load labels from dataset directory {dataset_dir!r}, '
+                 f'labels: {labels_info.labels!r}, unsupervised: {labels_info.unsupervised!r}.')
+    problem = ClassificationProblem(labels=labels_info.labels)
+    encoder: EncoderModel = load_encoder(encoder_model)
+
+    init_params = dict(init_params if init_params is not None else DEFAULT_INIT_PARAMS)
+    init_params['in_dims'] = encoder.width
+    init_params['out_dims'] = len(labels_info.labels)
     checkpoints = os.path.join(workdir, 'checkpoints')
     last_ckpt_zip_file = os.path.join(checkpoints, 'last.zip')
     if os.path.exists(last_ckpt_zip_file):
@@ -77,8 +89,6 @@ def train_classification(
         step_scheduler_with_optimizer=False,
     )
 
-    encoder: EncoderModel = load_encoder(encoder_model)
-
     train_cfg = {
         'batch_size': batch_size,
         'max_epochs': max_epochs,
@@ -97,10 +107,6 @@ def train_classification(
             'train': train_cfg,
         }, f, indent=4, ensure_ascii=False, sort_keys=True)
 
-    labels_info = load_labels_from_image_dir(dataset_dir, unsupervised=None)
-    logging.info(f'Load labels from dataset directory {dataset_dir!r}, '
-                 f'labels: {labels_info.labels!r}, unsupervised: {labels_info.unsupervised!r}.')
-    problem = ClassificationProblem(labels=labels_info.labels)
     dataset = ImageDirDataset(dataset_dir, labels=labels_info.labels, unsupervised=labels_info.unsupervised,
                               no_cache=True)
     train_dataset, test_dataset = dataset_split(dataset, [1 - test_split_ratio, test_split_ratio])

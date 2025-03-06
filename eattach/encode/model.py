@@ -19,6 +19,7 @@ class EncoderModel:
     model_name: str
     preprocessor: Callable[[Image.Image], torch.Tensor]
     model: nn.Module
+    width: int
 
 
 class ModuleWrapper(nn.Module):
@@ -124,6 +125,7 @@ def load_from_timm_repo(repo_id: str, is_smilingwolf: bool = False):
         model_name=f'{"timm" if not is_smilingwolf else "wdtagger"}:{repo_id}',
         preprocessor=t,
         model=wrapped_model,
+        width=dummy_output.shape[-1],
     )
 
 
@@ -135,3 +137,7 @@ def load_encoder(model_name: str):
         return load_from_timm_repo(repo_id=name, is_smilingwolf=True)
     else:
         raise ValueError(f'Unknown type for encoder model - {type_!r}')
+
+
+if __name__ == '__main__':
+    print(load_encoder('wdtagger:SmilingWolf/wd-swinv2-tagger-v3'))
