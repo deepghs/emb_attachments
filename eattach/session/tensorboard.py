@@ -38,7 +38,7 @@ class TensorboardLogger(BaseLogger):
             with io.StringIO() as sf:
                 print(f'Metrics logging at epoch {global_step}', file=sf, end='')
                 for key, value in sorted(logging_metrics.items()):
-                    print(f', {key}: {value:.3f}', file=sf, end='')
+                    print(f', {key}: {value:.4g}', file=sf, end='')
 
                 logging.info(sf.getvalue())
 
