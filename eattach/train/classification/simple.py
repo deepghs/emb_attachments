@@ -1,5 +1,6 @@
 import json
 import os
+import random
 from typing import Optional, Callable
 
 import torch
@@ -50,12 +51,13 @@ def train_classification(
         seed: Optional[int] = 0,
         eval_epoch: int = 1,
 ):
-    if seed is not None:
-        # native random, numpy, torch and faker's seeds are includes
-        # if you need to register more library for seeding, see:
-        # https://hansbug.github.io/hbutils/main/api_doc/random/state.html#register-random-source
-        logging.info(f'Globally set the random seed {seed!r}.')
-        global_seed(seed)
+    if seed is None:
+        seed = random.randint(0, (1 << 31) - 1)
+    # native random, numpy, torch and faker's seeds are includes
+    # if you need to register more library for seeding, see:
+    # https://hansbug.github.io/hbutils/main/api_doc/random/state.html#register-random-source
+    logging.info(f'Globally set the random seed {seed!r}.')
+    global_seed(seed)
 
     os.makedirs(workdir, exist_ok=True)
 
