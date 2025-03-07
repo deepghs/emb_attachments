@@ -115,7 +115,6 @@ def train_classification(
     dataset = ImageDirDataset(
         dataset_dir,
         labels=labels_info.labels,
-        unsupervised=labels_info.unsupervised,
         no_cache=True,
     )
     train_dataset, test_dataset = dataset_split(dataset, [1 - test_split_ratio, test_split_ratio])
@@ -287,7 +286,7 @@ if __name__ == '__main__':
     logging.try_init_root(logging.INFO)
     seed = int(os.environ.get('SEED', 0))
     train_classification(
-        workdir=f'runs/train_test_1l_s{seed}',
+        workdir=f'runs/train_test_1lx_s{seed}',
         dataset_dir='/data/monochrome_danbooru',
         train_augment=transforms.Compose([
             transforms.Resize((500, 500)),
