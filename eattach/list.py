@@ -17,7 +17,7 @@ from huggingface_hub.hf_api import RepoFile
 from thop import clever_format
 from tqdm import tqdm
 
-from .problem import load_problem, ClassificationProblem, TaggingProblem, RegressionProblem
+from .problem import load_problem, ClassificationProblem, TaggingProblem
 from .utils import GLOBAL_CONTEXT_SETTINGS, markdown_to_df
 from .utils import print_version as _origin_print_version
 
@@ -87,8 +87,6 @@ def huggingface(repository: str, revision: str):
             row['Labels'] = ', '.join(problem.labels)
         elif isinstance(problem, TaggingProblem):
             row['Tags'] = ', '.join(problem.tags)
-        elif isinstance(problem, RegressionProblem):
-            row['Values'] = ', '.join([name for name, _, _ in problem.fields])
 
         row['created_at'] = last_commit_at
         rows.append(row)
