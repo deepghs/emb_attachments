@@ -154,12 +154,16 @@ def train_classification(
     loss_fn = problem.get_loss_fn(loss_fn_name=loss, reduction='mean')
     optimizer = torch.optim.AdamW(
         filter(lambda p: p.requires_grad, model.parameters()),
-        lr=learning_rate, weight_decay=weight_decay
+        lr=learning_rate,
+        weight_decay=weight_decay,
     )
     scheduler = lr_scheduler.OneCycleLR(
-        optimizer, max_lr=learning_rate,
-        steps_per_epoch=len(train_dataloader), epochs=max_epochs,
-        pct_start=0.15, final_div_factor=20.
+        optimizer,
+        max_lr=learning_rate,
+        steps_per_epoch=len(train_dataloader) * accelerator.num_processes,
+        epochs=max_epochs,
+        pct_start=0.15,
+        final_div_factor=20.,
     )
 
     model, optimizer, train_dataloader, test_dataloader, scheduler, loss_fn = \
