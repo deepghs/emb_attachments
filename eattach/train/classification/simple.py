@@ -157,6 +157,11 @@ def train_classification(
         lr=learning_rate,
         weight_decay=weight_decay,
     )
+
+    model, optimizer, train_dataloader, test_dataloader, loss_fn = \
+        accelerator.prepare(model, optimizer, train_dataloader, test_dataloader, loss_fn)
+
+    # scheduler do not need to get prepared
     scheduler = lr_scheduler.OneCycleLR(
         optimizer,
         max_lr=learning_rate,
@@ -165,9 +170,6 @@ def train_classification(
         pct_start=0.15,
         final_div_factor=20.,
     )
-
-    model, optimizer, train_dataloader, test_dataloader, scheduler, loss_fn = \
-        accelerator.prepare(model, optimizer, train_dataloader, test_dataloader, scheduler, loss_fn)
 
     if accelerator.is_main_process:
         logging.info(f'Model Class: {type(model)!r}')
