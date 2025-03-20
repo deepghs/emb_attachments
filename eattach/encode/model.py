@@ -75,11 +75,13 @@ def _make_square(img):
     return padded_image
 
 
-def load_from_timm_repo(repo_id: str, is_smilingwolf: bool = False):
-    logging.info(f'Loading TIMM model from {repo_id!r} ...')
+def load_from_timm_repo(repo_id: str, is_smilingwolf: bool = False, is_main_process: bool = True):
+    if is_main_process:
+        logging.info(f'Loading TIMM model from {repo_id!r} ...')
     model = create_model(f'hf-hub:{repo_id}', pretrained=True)
 
-    logging.info('Loading default preprocessor ...')
+    if is_main_process:
+        logging.info('Loading default preprocessor ...')
     data_config = resolve_model_data_config(model)
     t = create_transform(**data_config, is_training=False)
 
@@ -91,35 +93,43 @@ def load_from_timm_repo(repo_id: str, is_smilingwolf: bool = False):
             break
     if not classifier_position:
         raise RuntimeError(f'No classifier module found in model {type(model)}.')
-    logging.info(f'Classifier module found at {classifier_position!r}:\n{classifier}')
+    if is_main_process:
+        logging.info(f'Classifier module found at {classifier_position!r}:\n{classifier}')
 
-    logging.info('Wrapped model created.')
+    if is_main_process:
+        logging.info('Wrapped model created.')
     wrapped_model = ModuleWrapper(model, classifier=classifier)
 
     image = load_image(os.path.join(os.path.dirname(__file__), 'sample.jpg'), mode='RGB', force_background='white')
     dummy_input = t(image).unsqueeze(0)
-    logging.info(f'Expected input size: {dummy_input.shape!r}')
+    if is_main_process:
+        logging.info(f'Expected input size: {dummy_input.shape!r}')
 
     if is_smilingwolf:
-        logging.info('Extra-processing preprocessor for smilingwolf-like models ...')
+        if is_main_process:
+            logging.info('Extra-processing preprocessor for smilingwolf-like models ...')
         expected_size = dummy_input.shape[2]
         t = create_square_pad_transform(expected_size)
         dummy_input = t(image).unsqueeze(0)
 
-        logging.info('Calculating expected input for smilingwolf taggers ...')
+        if is_main_process:
+            logging.info('Calculating expected input for smilingwolf taggers ...')
         expected_input = torch.from_numpy(_prepare_image_for_tagging(image, target_size=expected_size)).type(
             torch.float32)
 
-        logging.info('Checking input alignments ...')
+        if is_main_process:
+            logging.info('Checking input alignments ...')
         np.testing.assert_allclose(
             dummy_input.numpy(),
             expected_input.numpy()
         )
 
-    logging.info('Try infer with this encoder model ...')
+    if is_main_process:
+        logging.info('Try infer with this encoder model ...')
     with torch.no_grad():
         dummy_output = wrapped_model(dummy_input)
-    logging.info(f'Output size: {dummy_output.shape!r}')
+    if is_main_process:
+        logging.info(f'Output size: {dummy_output.shape!r}')
 
     return EncoderModel(
         model_name=f'{"timm" if not is_smilingwolf else "wdtagger"}:{repo_id}',
@@ -129,12 +139,12 @@ def load_from_timm_repo(repo_id: str, is_smilingwolf: bool = False):
     )
 
 
-def load_encoder(model_name: str):
+def load_encoder(model_name: str, is_main_process: bool = True):
     type_, name = model_name.split(':', maxsplit=1)
     if type_ == 'timm':
-        return load_from_timm_repo(repo_id=name, is_smilingwolf=False)
+        return load_from_timm_repo(repo_id=name, is_smilingwolf=False, is_main_process=is_main_process)
     elif type_ == 'wdtagger':
-        return load_from_timm_repo(repo_id=name, is_smilingwolf=True)
+        return load_from_timm_repo(repo_id=name, is_smilingwolf=True, is_main_process=is_main_process)
     else:
         raise ValueError(f'Unknown type for encoder model - {type_!r}')
 

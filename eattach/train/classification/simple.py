@@ -76,7 +76,7 @@ def train_classification(
         logging.info(f'Load labels from dataset directory {dataset_dir!r}, '
                      f'labels: {labels_info.labels!r}, unsupervised: {labels_info.unsupervised!r}.')
     problem = ClassificationProblem(labels=labels_info.labels)
-    encoder: EncoderModel = load_encoder(encoder_model)
+    encoder: EncoderModel = load_encoder(encoder_model, is_main_process=accelerator.is_main_process)
 
     init_params = dict(init_params if init_params is not None else DEFAULT_INIT_PARAMS)
     init_params['in_dims'] = encoder.width
@@ -297,7 +297,7 @@ def train_classification(
 
 if __name__ == '__main__':
     logging.try_init_root(logging.INFO)
-    if os.environ.get('SEED'):
+    if not os.environ.get('SEED'):
         seed = None
     else:
         seed = int(os.environ.get('SEED', 0))
