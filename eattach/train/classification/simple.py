@@ -5,6 +5,7 @@ from typing import Optional, Callable
 
 import torch
 from accelerate import Accelerator
+from accelerate.utils import broadcast_object_list
 from ditk import logging
 from hbutils.random import global_seed
 from sklearn.metrics import accuracy_score
@@ -58,17 +59,22 @@ def train_classification(
 
     if seed is None:
         seed = random.randint(0, (1 << 31) - 1)
+
+    blist = [seed]
+    broadcast_object_list(blist, from_process=0)
+    seed = blist[0]
     # native random, numpy, torch and faker's seeds are includes
     # if you need to register more library for seeding, see:
     # https://hansbug.github.io/hbutils/main/api_doc/random/state.html#register-random-source
-    logging.info(f'Globally set the random seed {seed!r}.')
+    logging.info(f'Globally set the random seed {seed!r} in process #{accelerator.process_index}.')
     global_seed(seed)
 
     os.makedirs(workdir, exist_ok=True)
 
     labels_info = load_labels_from_image_dir(dataset_dir, unsupervised=None)
-    logging.info(f'Load labels from dataset directory {dataset_dir!r}, '
-                 f'labels: {labels_info.labels!r}, unsupervised: {labels_info.unsupervised!r}.')
+    if accelerator.is_main_process:
+        logging.info(f'Load labels from dataset directory {dataset_dir!r}, '
+                     f'labels: {labels_info.labels!r}, unsupervised: {labels_info.unsupervised!r}.')
     problem = ClassificationProblem(labels=labels_info.labels)
     encoder: EncoderModel = load_encoder(encoder_model)
 
@@ -78,7 +84,8 @@ def train_classification(
     checkpoints = os.path.join(workdir, 'checkpoints')
     last_ckpt_zip_file = os.path.join(checkpoints, 'last.zip')
     if os.path.exists(last_ckpt_zip_file):
-        logging.info(f'Loading last checkpoint from {last_ckpt_zip_file!r} ...')
+        if accelerator.is_main_process:
+            logging.info(f'Loading last checkpoint from {last_ckpt_zip_file!r} ...')
         backbone, metadata = Backbone.load_from_zip(last_ckpt_zip_file, with_metadata=True)
         if model_type != backbone.type:
             raise RuntimeError('Model type not match with the previous version, '
@@ -87,9 +94,11 @@ def train_classification(
             raise RuntimeError('Init params not match, '
                                f'{backbone.init_params!r} expected but {init_params!r} found.')
         previous_epoch = metadata['step']
-        logging.info(f'Resume from epoch {previous_epoch!r}.')
+        if accelerator.is_main_process:
+            logging.info(f'Resume from epoch {previous_epoch!r}.')
     else:
-        logging.info(f'No last checkpoint found, initialize {model_type!r} model with params {init_params!r}.')
+        if accelerator.is_main_process:
+            logging.info(f'No last checkpoint found, initialize {model_type!r} model with params {init_params!r}.')
         backbone = Backbone.new(type_=model_type, **init_params)
         previous_epoch = 0
     model_type, init_params = backbone.type, backbone.init_params
@@ -104,7 +113,8 @@ def train_classification(
         'key_metric': key_metric,
         'processes': accelerator.num_processes,
     }
-    logging.info(f'Training configurations: {train_cfg!r}.')
+    if accelerator.is_main_process:
+        logging.info(f'Training configurations: {train_cfg!r}.')
     with open(os.path.join(workdir, 'meta.json'), 'w') as f:
         json.dump({
             'problem': problem.to_json(),
@@ -132,7 +142,8 @@ def train_classification(
         backbone=backbone.module,
         head=None,
     )
-    logging.info(f'Backbone structure:\n{backbone.module}')
+    if accelerator.is_main_process:
+        logging.info(f'Backbone structure:\n{backbone.module}')
 
     num_workers = num_workers or min(os.cpu_count(), batch_size)
     train_dataloader = DataLoader(
@@ -286,7 +297,10 @@ def train_classification(
 
 if __name__ == '__main__':
     logging.try_init_root(logging.INFO)
-    seed = int(os.environ.get('SEED', 0))
+    if os.environ.get('SEED'):
+        seed = None
+    else:
+        seed = int(os.environ.get('SEED', 0))
     train_classification(
         workdir=f'runs/train_test_1lx_s{seed}',
         dataset_dir='/data/monochrome_danbooru',
