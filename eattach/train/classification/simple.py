@@ -165,7 +165,7 @@ def train_classification(
     scheduler = lr_scheduler.OneCycleLR(
         optimizer,
         max_lr=learning_rate,
-        steps_per_epoch=len(train_dataloader) * accelerator.num_processes,
+        steps_per_epoch=len(train_dataloader),
         epochs=max_epochs,
         pct_start=0.15,
         final_div_factor=20.,
