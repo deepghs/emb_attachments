@@ -59,7 +59,6 @@ def train_classification(
 
     if seed is None:
         seed = random.randint(0, (1 << 31) - 1)
-
     blist = [seed]
     broadcast_object_list(blist, from_process=0)
     seed = blist[0]
