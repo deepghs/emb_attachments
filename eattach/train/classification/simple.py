@@ -167,6 +167,7 @@ def train_classification(
         accelerator.prepare(model, optimizer, train_dataloader, test_dataloader, scheduler, loss_fn)
 
     if accelerator.is_main_process:
+        logging.info(f'Model Class: {type(model)!r}')
         session = TrainSession(
             workdir, key_metric=key_metric,
             extra_metadata={
