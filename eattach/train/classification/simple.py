@@ -51,6 +51,11 @@ def train_classification(
         seed: Optional[int] = 0,
         eval_epoch: int = 1,
 ):
+    accelerator = Accelerator(
+        # mixed_precision=self.cfgs.mixed_precision,
+        step_scheduler_with_optimizer=False,
+    )
+
     if seed is None:
         seed = random.randint(0, (1 << 31) - 1)
     # native random, numpy, torch and faker's seeds are includes
@@ -88,11 +93,6 @@ def train_classification(
         backbone = Backbone.new(type_=model_type, **init_params)
         previous_epoch = 0
     model_type, init_params = backbone.type, backbone.init_params
-
-    accelerator = Accelerator(
-        # mixed_precision=self.cfgs.mixed_precision,
-        step_scheduler_with_optimizer=False,
-    )
 
     train_cfg = {
         'batch_size': batch_size,
