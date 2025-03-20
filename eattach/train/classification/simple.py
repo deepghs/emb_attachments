@@ -303,13 +303,11 @@ def train_classification(
 
 if __name__ == '__main__':
     logging.try_init_root(logging.INFO)
-    if not os.environ.get('SEED'):
-        seed = None
-    else:
-        seed = int(os.environ.get('SEED', 0))
+    seed = int(os.environ.get('SEED', 0))
+    dataset_dir = os.environ['DATASET_DIR']
     train_classification(
-        workdir=f'runs/train_test_1lx_s{seed}',
-        dataset_dir='/data/monochrome_danbooru',
+        workdir=f'runs/{os.path.basename(dataset_dir)}_1l_s{seed}',
+        dataset_dir=dataset_dir,
         train_augment=transforms.Compose([
             transforms.Resize((500, 500)),
             RangeRandomCrop((400, 500), padding=0, pad_if_needed=True, padding_mode='reflect'),
