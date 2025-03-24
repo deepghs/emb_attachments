@@ -1,7 +1,7 @@
 import json
 import os
 import random
-from typing import Optional, Callable
+from typing import Optional, Callable, List
 
 import torch
 from accelerate import Accelerator
@@ -33,6 +33,7 @@ def train_classification(
         dataset_dir: str,
 
         # model configuration
+        classes: Optional[List[str]] = None,
         encoder_model: str = 'wdtagger:SmilingWolf/wd-swinv2-tagger-v3',
         model_type: str = 'mlp',
         init_params: dict = None,
@@ -71,6 +72,10 @@ def train_classification(
     os.makedirs(workdir, exist_ok=True)
 
     labels_info = load_labels_from_image_dir(dataset_dir, unsupervised=None)
+    if classes is not None:
+        if accelerator.is_main_process:
+            logging.info(f'Force assigned classes to {classes!r}.')
+        labels_info.labels = list(classes)
     if accelerator.is_main_process:
         logging.info(f'Load labels from dataset directory {dataset_dir!r}, '
                      f'labels: {labels_info.labels!r}, unsupervised: {labels_info.unsupervised!r}.')
