@@ -47,7 +47,7 @@ def train_classification(
         max_epochs: int = 100,
         batch_size: int = 16,
         learning_rate: float = 0.001,
-        weight_decay: float = 1e-3,
+        weight_decay: float = 1e-2,
         key_metric: str = 'AUC',
         loss: str = 'focal',
         seed: Optional[int] = 0,
@@ -316,8 +316,8 @@ if __name__ == '__main__':
         train_augment=transforms.Compose([
             transforms.Resize((500, 500)),
             RangeRandomCrop((400, 500), padding=0, pad_if_needed=True, padding_mode='reflect'),
-            transforms.RandomRotation((-45, 45)),
             transforms.RandomHorizontalFlip(),
+            transforms.AutoAugment(),
             transforms.ColorJitter(0.10, 0.10, 0.05, 0.03),
         ]),
         seed=seed,
