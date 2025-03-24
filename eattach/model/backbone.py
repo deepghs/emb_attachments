@@ -11,6 +11,7 @@ from safetensors.torch import save_model, load_model
 from torch import nn
 
 from .activation import get_act_func
+from .norm import create_norm
 
 
 @dataclass
@@ -94,9 +95,8 @@ def register_backbone(name: str):
 class MLP(nn.Module):
     def __init__(self, in_dims: int = 1024, out_dims: int = 1,
                  layers: Optional[List[Union[int, float]]] = None, act_func: str = 'relu',
-                 dropout_rate: float = 0.2, **kwargs):
+                 dropout_rate: float = 0.2, norm_type: str = 'none', **kwargs):
         nn.Module.__init__(self)
-        _ = kwargs
         layers = [
             x if isinstance(x, int) else int(round(x * in_dims))
             for x in (layers or [])
@@ -106,6 +106,9 @@ class MLP(nn.Module):
         layers = [in_dims, *layers]
         for prev_layer, next_layer in zip(layers[:-1], layers[1:]):
             _layers.append(nn.Linear(prev_layer, next_layer))
+            norm = create_norm(norm_type, next_layer, **kwargs)
+            if norm is not None:
+                _layers.append(norm)
             _layers.append(get_act_func(act_func))
             if dropout_rate > 0:
                 _layers.append(nn.Dropout(p=dropout_rate))
